@@ -4,9 +4,11 @@ import json      # JSON module for interacting with JSON formatted data
 import os        # OS Module for interacting with local os
 
 from query import Query   # Query module provides logic to manage REST API queries
+from data import Data
 from ip import IP
 from interface import Interface
 import fabric
+
 
 
 # Fabric object used to interact with an ACI fabric.
@@ -241,6 +243,8 @@ class Node(object):
 		if payload is None:
 			payload = path
 			path = 'mo.json'
+		if isinstance(payload, Data):
+			payload = payload.json
 		self.__post(path, payload)
 		if self.response.status_code == 403:
 			if not self.login():
