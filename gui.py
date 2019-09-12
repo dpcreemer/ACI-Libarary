@@ -5,13 +5,8 @@ from fabric import Fabric
 from data import Data, json_to_xml
 
 fabrics = {
-	"lab": {"address": "netlabapic02.jhalabs.com", "fabric": None, "login": False},
-	"jhalabs": {"address": "apic.jhalabs.com", "fabric": None, "login": False},
-	"atx": {"address": "p-atxdc14-apic2.jkhy.com", "fabric": None, "login": False},
-	"bmo": {"address": "bmoapic02.jhky.com", "fabric": None, "login": False},
-	"smo": {"address": "smoapic02.jkhy.com", "fabric": None, "login": False},
-	"mmo": {"address": "mmoapic02.jkhy.com", "fabric": None, "login": False},
-	"lks": {"address": "lksapic02.jkhy.com", "fabric": None, "login": False}}
+	"lab": {"address": "lab.company.com", "fabric": None, "login": False},
+	"prod": {"address": "prod.company.com", "fabric": None, "login": False}}
 
 
 def login_changes(logged_in):
