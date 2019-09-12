@@ -1,6 +1,6 @@
-from node import Node
-from ip import IP
-import copy
+from node import Node     # Node object for connection to APICs, Leaves, and Spines
+from ip import IP         # IP object for ipv4 address functions
+import copy               # Copy object to clone class objects
 
 
 class Fabric(object):

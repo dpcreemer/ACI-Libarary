@@ -1,10 +1,56 @@
 import json
 
 
+def json_to_xml(js, key=None, indent=0):
+	if key is None:
+		if type(js) is list:
+			rv = ''
+			for o in js:
+				key = list(o.keys())[0]
+				rv += json_to_xml(o[key], key)
+			return rv
+		elif 'imdata' in js:
+			key = 'imdata'
+		else:
+			key = list(js.keys())[0]
+			js = js[key]
+	if key is 'imdata' and 'totalCount' in js:
+		atts = f' totalCount="{js["totalCount"]}"'
+		sub = ''
+		for o in js['imdata']:
+			subkey = str(list(o.keys())[0])
+			sub += json_to_xml(o[subkey], subkey, indent + 2)
+		return f'<{key}{atts}>\n{sub}</{key}>\n'
+	elif 'attributes' in js:
+		atts = ''
+		for att in js['attributes'].keys():
+			atts += f" {att}='{js['attributes'][att]}'"
+		if 'children' in js:
+			sub = ''
+			for o in js['children']:
+				subkey = str(list(o.keys())[0])
+				sub += json_to_xml(o[subkey], subkey, indent + 2)
+			return ' ' * indent + f'<{key}{atts}>\n{sub}</{key}>\n'
+		else:
+			return ' ' * indent + f'<{key}{atts}/>\n'
+	else:
+		print('fault')
+
+
+def xml_to_json(xml):
+	raise Exception("xml_to_json Procedure not ready yet!")
+	while "<?" in xml and "?>" in xml:
+		xml = xml.replace(xml[xml.find("<?"):xml.find("?>") + 2], "")
+	return True
+
+
 class Data(object):
 	def __init__(self, content):
 		if type(content) is str:
-			content = json.loads(content)
+			if content.strip()[0] == '<':
+				content = xml_to_json(content)
+			else:
+				content = json.loads(content)
 		self.__content = content
 
 	@property
@@ -17,7 +63,7 @@ class Data(object):
 
 	@property
 	def xml(self):
-		return self.json_to_xml(self.__content)
+		return json_to_xml(self.__content)
 
 	@property
 	def imdata(self):
@@ -70,40 +116,6 @@ class Data(object):
 		else:
 			return ret
 
-	def json_to_xml(self, js, key=None, indent=0):
-		if key is None:
-			if type(js) is list:
-				rv = ''
-				for o in js:
-					key = list(o.keys())[0]
-					rv += self.json_to_xml(o[key], key)
-				return rv
-			elif 'imdata' in js:
-				key = 'imdata'
-			else:
-				key = list(js.keys())[0]
-		if key is 'imdata' and 'totalCount' in js:
-			atts = f' totalCount="{js["totalCount"]}"'
-			sub = ''
-			for o in js['imdata']:
-				subkey = str(list(o.keys())[0])
-				sub += self.json_to_xml(o[subkey], subkey, indent+2)
-			return f'<{key}{atts}>\n{sub}</{key}>\n'
-		elif 'attributes' in js:
-			atts = ''
-			for att in js['attributes'].keys():
-				atts += f' {att}="{js["attributes"][att]}"'
-			if 'children' in js:
-				sub = ''
-				for o in js['children']:
-					subkey = str(list(o.keys())[0])
-					sub += self.json_to_xml(o[subkey], subkey, indent+2)
-				return ' '*indent + f'<{key}{atts}>\n{sub}</{key}>\n'
-			else:
-				return ' '*indent + f'<{key}{atts}/>\n'
-		else:
-			print('fault')
-
 	def print(self, index=None, style='json'):
 		if index is not None:
 			if type(index) is not int:
@@ -119,7 +131,7 @@ class Data(object):
 			if index is None:
 				print(self.xml)
 			else:
-				print(self.json_to_xml(self.imdata[index]))
+				print(json_to_xml(self.imdata[index]))
 		else:
 			print(self.content)
 
