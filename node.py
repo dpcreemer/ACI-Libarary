@@ -243,6 +243,8 @@ class Node(object):
 		if payload is None:
 			payload = path
 			path = 'mo.json'
+			if type(payload) is str and payload.strip()[0] == '<':
+				path = 'mo.xml'
 		if isinstance(payload, Data):
 			payload = payload.json
 		self.__post(path, payload)
