@@ -1,0 +1,3 @@
+lab:		labfabric.company.com
+fab1:		fabric1.company.com
+fab2:		fabric2.company.com

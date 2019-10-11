@@ -4,9 +4,11 @@ from tkinter import messagebox
 from fabric import Fabric
 from data import Data, json_to_xml
 
-fabrics = {
-	"lab": {"address": "lab.company.om", "fabric": None, "login": False},
-	"prod": {"address": "prod.company.com", "fabric": None, "login": False}}
+file = open('fabrics.txt')
+txt = file.read().strip()
+file.close()
+file_text = [o.split(':') for o in txt.strip().split('\n')]
+fabrics = {o[0]:{'address': o[1].strip(), 'fabric': None, 'login': False} for o in file_text}
 
 
 def login_changes(logged_in):

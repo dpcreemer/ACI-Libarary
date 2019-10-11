@@ -1,14 +1,14 @@
-from node import Node     # Node object for connection to APICs, Leaves, and Spines
+import node               # Node object for connection to APICs, Leaves, and Spines
 from ip import IP         # IP object for ipv4 address functions
 import copy               # Copy object to clone class objects
 
 
 class Fabric(object):
 	def __init__(self, apic, username=None, password=None):
-		if isinstance(apic, Node):
+		if isinstance(apic, node.Node):
 			self.__apic = apic
 		else:
-			self.__apic = Node(apic, username, password)
+			self.__apic = node.Node(apic, username, password)
 
 	@property
 	def apic(self):
@@ -16,10 +16,10 @@ class Fabric(object):
 
 	@apic.setter
 	def apic(self, apic):
-		if isinstance(apic, Node):
+		if isinstance(apic, node.Node):
 			self.__apic = apic
 		elif type(apic) is str:
-			self.__apic = Node(apic)
+			self.__apic = node.Node(apic)
 
 	@property
 	def node_ids(self):
@@ -72,6 +72,24 @@ class Fabric(object):
 		query.run()
 		return query
 
+	def aaep_cdp_neighbors(self, aaep, printout=False):
+		filter = f'and(eq(l1RsAttEntityPCons.tDn, "uni/infra/attentp-{aaep}"), wcard(l1RsAttEntityPCons.dn, "phys-"))'
+		q = self.qr('l1RsAttEntityPCons', filter=filter)
+		neighbors = []
+		for port in q.data.imdata:
+			node = port['l1RsAttEntityPCons']['attributes']['dn']
+			node = node[:node.find('/phys-[')]
+			ifc = port['l1RsAttEntityPCons']['attributes']['parentSKey']
+			qcdp = self.qr(f'{node}/cdp/inst/if-[{ifc}]', target='subtree', target_class='cdpAdjEp')
+			if qcdp.count > 0:
+				for nbr in qcdp.data.attribute(['devId', 'portId'], False):
+					neighbors.append([node[node.find('node-')+5:node.find('/sys')], ifc, nbr[0], nbr[1]])
+		if printout:
+			for neighbor in neighbors:
+				print(f'{neighbor[0]} {neighbor[1]} {neighbor[2]} {neighbor[3]}')
+		else:
+			return neighbors
+
 	def transceiver_count(self):
 		return self.apic.qr('ethpmFcot').output.sum('typeName', True)
 
@@ -79,7 +97,7 @@ class Fabric(object):
 		from getpass import getpass
 		if old_password is None:
 			old_password = getpass('Current password: ')
-		apic = Node(self.apic.address, f'apic#fallback\\\\{user}', old_password)
+		apic = node.Node(self.apic.address, f'apic#fallback\\\\{user}', old_password)
 		while new_password is None:
 			new_password = getpass('New password: ')
 			if new_password != getpass('Re-enter new password: '):

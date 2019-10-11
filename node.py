@@ -10,12 +10,11 @@ from interface import Interface
 import fabric
 
 
-
 # Fabric object used to interact with an ACI fabric.
 # Initialized with a "address" property, the management address of a fabric APIC
 # Optional username and password properties allow for authentication
 class Node(object):
-	def __init__(self, address, username=None, password=None, parent_fabric=None):
+	def __init__(self, address, username=None, password=None, parent_fabric=None, auto_login=True):
 		self.__ip = None
 		self.__address = None
 		self.__username = None
@@ -26,9 +25,10 @@ class Node(object):
 		self.__pod = None
 		self.__name = None
 		self.__role = None
+		self.__cookies = ''
+		self.__auto_login = auto_login
 		self.username = username
 		self.password = password
-		self.cookies = ''
 		self.established = 0
 		requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 		self.session = requests.session()
@@ -58,6 +58,18 @@ class Node(object):
 			self.__ip = address
 		else:
 			self.__ip = IP(address)
+
+	@property
+	def cookies(self):
+		return self.__cookies
+
+	@cookies.setter
+	def cookies(self, cookies):
+		if type(cookies) is str:
+			self.session.cookies.set('APIC-cookie', cookies)
+			self.__cookies = self.session.cookies
+		else:
+			self.__cookies = cookies
 
 	@property
 	def fabric(self):
@@ -98,6 +110,21 @@ class Node(object):
 		if self.__dn is None:
 			self.__init_values()
 		return self.__role
+
+	@property
+	def auto_login(self):
+		return self.__auto_login
+
+	@auto_login.setter
+	def auto_login(self, auto_login):
+		if type(auto_login) is not bool:
+			raise Exception('auto_login: Invalid value. Must by type boolean.')
+		self.__auto_login = auto_login
+
+	@property
+	def login_status(self):
+		self.__get('mo/topology/pod-1/node-1.json')
+		return self.response.status_code != 403
 
 	@property
 	def username(self):
@@ -190,7 +217,7 @@ class Node(object):
 			return False
 		if self.response.status_code >= 400:
 			raise Exception(f"Error {self.response.status_code} - HTTPS Request Error - Abort!")
-		self.cookies = self.response.cookies
+		self.__cookies = self.response.cookies
 		self.established = datetime.now()
 		return True
 
@@ -201,7 +228,7 @@ class Node(object):
 		if self.response.status_code >= 400:
 			print(f"Error {self.response.status_code} - Unable to refresh session - ABORT!")
 			return False
-		self.cookies = self.response.cookies
+		self.__cookies = self.response.cookies
 		return True
 
 	# Logout function sends a logout request to APIC
@@ -249,9 +276,12 @@ class Node(object):
 			payload = payload.json
 		self.__post(path, payload)
 		if self.response.status_code == 403:
-			if not self.login():
-				raise Exception("Authentication failed.")
-			self.__post(path, payload)
+			if self.auto_login:
+				if not self.login():
+					raise Exception('Authentication failed.')
+				self.__post(path, payload)
+			else:
+				raise Exception('Unable to post to node. Not currently logged in and "auto_login" is disabled.')
 		return self.response.status_code
 
 	# Post config from a file to the apic
@@ -298,8 +328,11 @@ class Node(object):
 	def get(self, path, parameters=None):
 		self.__get(path, parameters)
 		if self.response.status_code == 403:
-			self.login()
-			self.__get(path, parameters)
+			if self.auto_login:
+				self.login()
+				self.__get(path, parameters)
+			else:
+				raise Exception('Unable to query node. Not currently logged in and "auto_login" is disabled.')
 		if path[-5:] == '.json':
 			return json.loads(self.response.text)
 		return self.response.text
